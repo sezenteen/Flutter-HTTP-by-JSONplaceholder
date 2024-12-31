@@ -48,50 +48,97 @@ class _HomePageState extends State<HomePage> {
   }
 
   // Create: Add a new user
-Future<void> addUser(String name, String email) async {
-  final response = await http.post(
-    Uri.parse(apiUrl),
-    headers: {'Content-Type': 'application/json'},
-    body: json.encode({'name': name, 'email': email}),
-  );
-  if (response.statusCode == 201) {
-    setState(() {
-      // Simulate adding a user locally
-      users.add({'id': users.length + 1, 'name': name, 'email': email});
-    });
+  Future<void> addUser(String name, String email) async {
+    final response = await http.post(
+      Uri.parse(apiUrl),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({'name': name, 'email': email}),
+    );
+    if (response.statusCode == 201) {
+      setState(() {
+        // Simulate adding a user locally
+        users.add({'id': users.length + 1, 'name': name, 'email': email});
+      });
+    }
   }
-}
 
-// Update: Edit a user
-Future<void> editUser(int id, String name, String email) async {
-  final response = await http.put(
-    Uri.parse('$apiUrl/$id'),
-    headers: {'Content-Type': 'application/json'},
-    body: json.encode({'name': name, 'email': email}),
-  );
-  if (response.statusCode == 200) {
-    setState(() {
-      // Simulate editing a user locally
-      final userIndex = users.indexWhere((user) => user['id'] == id);
-      if (userIndex != -1) {
-        users[userIndex]['name'] = name;
-        users[userIndex]['email'] = email;
-      }
-    });
+  // Update: Edit a user
+  Future<void> editUser(int id, String name, String email) async {
+    final response = await http.put(
+      Uri.parse('$apiUrl/$id'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({'name': name, 'email': email}),
+    );
+    if (response.statusCode == 200) {
+      setState(() {
+        // Simulate editing a user locally
+        final userIndex = users.indexWhere((user) => user['id'] == id);
+        if (userIndex != -1) {
+          users[userIndex]['name'] = name;
+          users[userIndex]['email'] = email;
+        }
+      });
+    }
   }
-}
 
-// Delete: Remove a user
-Future<void> deleteUser(int id) async {
-  final response = await http.delete(Uri.parse('$apiUrl/$id'));
-  if (response.statusCode == 200) {
-    setState(() {
-      // Simulate deleting a user locally
-      users.removeWhere((user) => user['id'] == id);
-    });
+  // Delete: Remove a user
+  Future<void> deleteUser(int id) async {
+    final response = await http.delete(Uri.parse('$apiUrl/$id'));
+    if (response.statusCode == 200) {
+      setState(() {
+        // Simulate deleting a user locally
+        users.removeWhere((user) => user['id'] == id);
+      });
+    }
   }
-}
 
+  // Dialog for adding or editing a user
+  Future<void> showUserDialog({int? id, String? name, String? email}) async {
+    final nameController = TextEditingController(text: name ?? '');
+    final emailController = TextEditingController(text: email ?? '');
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(id == null ? 'Add User' : 'Edit User'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(labelText: 'Name'),
+              ),
+              TextField(
+                controller: emailController,
+                decoration: const InputDecoration(labelText: 'Email'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final userName = nameController.text;
+                final userEmail = emailController.text;
+
+                if (id == null) {
+                  addUser(userName, userEmail); // Add new user
+                } else {
+                  editUser(id, userName, userEmail); // Edit existing user
+                }
+                Navigator.pop(context);
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   // UI to display and manage users
   @override
@@ -110,7 +157,11 @@ Future<void> deleteUser(int id) async {
               children: [
                 IconButton(
                   icon: const Icon(Icons.edit),
-                  onPressed: () => editUser(user['id'], 'Updated Name', 'updated@email.com'),
+                  onPressed: () => showUserDialog(
+                    id: user['id'],
+                    name: user['name'],
+                    email: user['email'],
+                  ),
                 ),
                 IconButton(
                   icon: const Icon(Icons.delete),
@@ -122,7 +173,7 @@ Future<void> deleteUser(int id) async {
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => addUser('New User', 'newuser@email.com'),
+        onPressed: () => showUserDialog(),
         child: const Icon(Icons.add),
       ),
     );
